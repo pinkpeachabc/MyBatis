@@ -1,0 +1,172 @@
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.pinkpeachabc.Mapper.UserMapper">
+    <!--select元素通过id查询-->
+    <select id="findUserByUid" parameterType="int" resultType="user">
+        select *
+        from user
+        where id = #{id}
+    </select>
+
+    <!--select元素通过username查询-->
+    <select id="findUserByname" parameterType="String" resultType="user">
+        select *
+        from user
+        where username like '%${value}%'
+    </select>
+
+    <!--select元素通过JavaBean姓名和性别查询-->
+    <select id="findUserByJavaBean" parameterType="userParam" resultType="user">
+        select *
+        from user
+        where username like CONCAT('%', #{userName}, '%')
+          and gender = #{userSex}
+    </select>
+
+    <!--select元素通过map传递多个值,此时下面的变量为hashmap存入的key值-->
+    <select id="findUserByMap" parameterType="map" resultType="user">
+        select *
+        from user
+        where username like CONCAT('%', #{uname}, '%')
+          and gender = #{usex}
+    </select>
+
+    <!--insert元素向数据库插入数据-->
+    <insert id="addUser" parameterType="user" keyColumn="id" keyProperty="id" useGeneratedKeys="true">
+        INSERT INTO user(username, password, gender, email, telephone)
+        VALUES (#{username}, #{password}, #{gender}, #{email}, #{telephone})
+    </insert>
+
+    <!--update元素向数据库更新数据-->
+    <update id="updateUser" parameterType="map">
+        UPDATE user
+        SET password = #{pwd},
+            gender   = #{sex}
+        WHERE id = #{id}
+    </update>
+
+    <!--delete元素向数据库删除数据-->
+    <delete id="deleteUser" parameterType="map">
+        DELETE
+        FROM user
+        WHERE id = #{id}
+    </delete>
+
+    <!--**************动态SQl***************-->
+
+    <!--if语句中可以同时成立-->
+    <select id="findUserByIF" parameterType="userParam" resultType="user">
+        select * from user where 1=1
+        <if test="userName != null and userName != ''">and username like CONCAT('%',#{userName},'%')</if>
+        <if test="userSex != null and userSex != ''">and gender =#{userSex}</if>
+    </select>
+
+    <!--choose中只能单个成立，通过设置username，userphone查询，若是空值则查询性别为女的用户-->
+    <select id="findUserByChoose" parameterType="userParam" resultType="user">
+        select * from user where 1=1
+        <choose>
+            <when test="userName != null and userName != ''">and username like CONCAT('%',#{userName},'%')</when>
+            <when test="userPhone != null and userPhone != ''">and telephone like CONCAT('%',#{telephone},'%')</when>
+            <otherwise>and gender='女'</otherwise>
+        </choose>
+    </select>
+
+    <!--where元素可以补齐不需要再sql语句中写-->
+    <select id="findUserByWhere" parameterType="userParam" resultType="user">
+        select * from user
+        <where>
+            <choose>
+                <when test="userName != null and userName != ''">and username like CONCAT('%',#{userName},'%')</when>
+                <when test="userPhone != null and userPhone != ''">and telephone like CONCAT('%',#{telephone},'%')
+                </when>
+                <otherwise>and gender='女'</otherwise>
+            </choose>
+        </where>
+
+    </select>
+
+    <!-- trim 元素-->
+    <select id="findUserByTrim" parameterType="userParam" resultType="user">
+        select * from user
+        # 在查询条件前面加入关键字，和去掉关键字
+        <trim prefix="where" prefixOverrides="and|or">
+            <if test="userName != null and userName != ''">and username like CONCAT('%',#{userName},'%')</if>
+            <if test="userSex != null and userSex != ''">and gender =#{userSex}</if>
+        </trim>
+    </select>
+
+    <!-- trim元素插入 -->
+    <insert id="addUserTrim" parameterType="user" keyColumn="id" keyProperty="id" useGeneratedKeys="true">
+        INSERT INTO user(username,password,gender,email,telephone)
+        VALUES(#{username},#{password},#{gender},#{email},#{telephone})
+        INSERT INTO user(
+        <trim suffix="username,password" suffixOverrides="and|or"></trim>
+        <where>
+            <if test="userName!=null and userName!=''">and username LIKE CONCAT('%',#{userName},'%')</if>
+            <if test="userSex!=null and userSex!=''">and gender=#{userSex}</if>
+        </where>
+    </insert>
+
+    <!-- trim更新 -->
+    <update id="updateUserTrim" parameterType="UserParam">
+        UPDATE user set
+        <trim suffixOverrides=",">
+            <if test="userPwd!=null and userPwd!=''">password=#{userPwd},</if>
+            <if test="userSex!=null and userSex!=''">gender=#{userSex},</if>
+        </trim>
+        WHERE id=#{id}
+    </update>
+
+    <!-- trim更新运用set元素，条件不为空时，自动加入set关键字，并且去掉最后面的","号 -->
+    <update id="updateUserSet" parameterType="UserParam">
+        UPDATE user
+        <set>
+            <if test="userPwd!=null and userPwd!=''">password=#{userPwd},</if>
+            <if test="userSex!=null and userSex!=''">gender=#{userSex},</if>
+        </set>
+        WHERE id=#{id}
+    </update>
+
+    <!-- trim删除的运用 -->
+    <delete id="deleteUserTrim" parameterType="map">
+        DELETE FROM user
+        <trim prefix="where">
+            id = #{id}
+        </trim>
+    </delete>
+
+    <!--bind标签-->
+    <select id="findUserByUnameBind" parameterType="userParam" resultType="user">
+        <bind name="bindname" value="'%'+userName+'%'"/>
+        select * from user where username like #{bindname}
+    </select>
+
+    <!--foreach标签 传递集合-->
+    <select id="findUserByIdForeachList" resultType="user">
+        SELECT * FROM user WHERE id in
+        <foreach collection="list" item="id" separator="," open="(" close=")">
+            #{id}
+        </foreach>
+    </select>
+
+    <!--foreach标签 传递数组-->
+    <select id="findUserByIdForeachMap"  parameterType="map" resultType="user">
+        SELECT * FROM user WHERE gender=#{sex} and id in
+        <foreach collection="uids" item="id" separator="," open="(" close=")">
+            #{id}
+        </foreach>
+    </select>
+
+    <!--foreach标签 JavaBean传递多个数据-->
+    <select id="findUserByIdForeachBean"  parameterType="userParam" resultType="user">
+        SELECT * FROM user WHERE gender=#{userSex} and id in
+        <foreach collection="listId" item="id" separator="," open="(" close=")">
+            #{id}
+        </foreach>
+    </select>
+
+
+    <!--**************批量插入***************-->
+
+</mapper>
